@@ -1,6 +1,7 @@
 import os
 import logging
 import discord
+from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
 
@@ -19,22 +20,28 @@ activity = discord.Activity(
     name="Test activity"
 )
 
-class Client(discord.Client):
+class BotClient(commands.Bot):
     def __init__(self):
-        super().__init__(intents=discord.Intents.default())
-        self.tree = app_commands.CommandTree(self)
-    
+        super().__init__(command_prefix='', intents=discord.Intents.default())
+
+    async def setup_hook(self) -> None:
+        await self.load_extension("cogs.data_commands")
+        logger.info("Extension 'cogs.data_commands' chargée.")
+        
+        try:
+            synced_commands = await self.tree.sync() 
+            logger.info(f"Synchronisation de {len(synced_commands)} commandes Slash effectuée.")
+        except Exception as e:
+            logger.error(f"Erreur lors de la synchronisation des commandes: {e}")
+
     async def on_ready(self):
-        """Se déclenche une fois le bot connecté."""
- 
         await self.change_presence(
             status=discord.Status.dnd,
-            activity=activity
+            activity=activity 
         )
         
         logger.info(f'------------------------------------')
         logger.info(f'Bot connecté avec succès : {self.user}')
-        logger.info(f'ID : {self.user.id}')
         logger.info(f'Statut défini sur DND, Activité : {activity.name}')
         logger.info(f'Prêt à recevoir des commandes Slash.')
         logger.info(f'------------------------------------')
@@ -44,7 +51,7 @@ if __name__ == "__main__":
         logger.critical("Erreur: Le token est introuvable dans le fichier .env")
         exit()
 
-    client = Client()
+    client = BotClient()
     
     try:
         client.run(TOKEN)
